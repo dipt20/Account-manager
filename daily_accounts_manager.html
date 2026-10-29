@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Accounts Manager | হিসাব খাতা</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts for Bengali & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Hind Siliguri', 'Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        ledgerPaper: '#fbf9f1',
+                        ledgerHeader: '#eae5d9',
+                        ledgerLine: '#d8d1c0',
+                        ledgerRed: '#8b0000',
+                        ledgerTeal: '#0f766e',
+                        ledgerAmber: '#d97706',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f3efe6;
+            color: #2b2b2b;
+            font-family: 'Hind Siliguri', sans-serif;
+            background-image: radial-gradient(#e2dccf 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* Ledger Paper Aesthetics */
+        .ledger-page {
+            background-color: #fbf9f1;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+            border: 1px solid #e2dccf;
+        }
+
+        .ledger-table input, .ledger-table select {
+            background: transparent;
+            width: 100%;
+            border-bottom: 1px dashed #cbd5e1;
+            padding: 4px 6px;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .ledger-table input:focus, .ledger-table select:focus {
+            background-color: #ffffff;
+            border-bottom: 2px solid #0f766e;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border-radius: 4px;
+        }
+
+        /* Prevent auto-submit or unexpected line breaks inside ledger inputs */
+        .ledger-table input {
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Printable Styling */
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background: white !important;
+                background-image: none !important;
+                color: black !important;
+            }
+            .ledger-page {
+                box-shadow: none !important;
+                border: none !important;
+                padding: 0 !important;
+            }
+            .ledger-table input, .ledger-table select {
+                border: none !important;
+                appearance: none;
+            }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #eae5d9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #b0a895;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Top Header Navigation -->
+    <header class="bg-white border-b border-amber-200/80 shadow-sm sticky top-0 z-30 no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between py-3 gap-3">
+                
+                <!-- Logo & Title -->
+                <div class="flex items-center space-x-3 space-x-reverse">
+                    <div class="bg-amber-800 text-amber-50 p-2.5 rounded-xl shadow-md flex items-center justify-center">
+                        <i class="fa-solid fa-book-open text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-800 tracking-wide">Daily Accounts Manager</h1>
+                        <p class="text-xs font-semibold text-amber-800">সহজ ও ডিজিটাল খাতা ড্যাশবোর্ড</p>
+                    </div>
+                </div>
+
+                <!-- Date Filter Control -->
+                <div class="flex flex-wrap items-center gap-2 bg-amber-50/80 p-2 rounded-xl border border-amber-200">
+                    <i class="fa-regular fa-calendar-days text-amber-800 text-lg ml-1"></i>
+                    <span class="text-xs font-bold text-amber-900 hidden sm:inline">তারিখ সিলেক্ট:</span>
+                    <input type="date" id="startDate" onchange="filterByDate()" class="bg-white border border-amber-300 text-gray-800 text-xs sm:text-sm rounded-lg p-1.5 font-medium outline-none focus:ring-2 focus:ring-amber-600">
+                    <span class="text-gray-400 font-bold">-</span>
+                    <input type="date" id="endDate" onchange="filterByDate()" class="bg-white border border-amber-300 text-gray-800 text-xs sm:text-sm rounded-lg p-1.5 font-medium outline-none focus:ring-2 focus:ring-amber-600">
+                    <button onclick="resetDateFilter()" class="bg-amber-200 hover:bg-amber-300 text-amber-900 text-xs px-2.5 py-1.5 rounded-lg transition font-bold" title="আজকের তারিখ">
+                        <i class="fa-solid fa-rotate-left"></i> আজ
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab Navigation Menu -->
+            <nav class="flex space-x-2 sm:space-x-4 border-t border-gray-100 mt-1 pt-2 overflow-x-auto">
+                <button onclick="switchTab('sales')" id="tab-sales" class="tab-btn px-4 py-2 font-bold text-sm sm:text-base rounded-t-xl transition flex items-center gap-2 border-b-2 border-teal-700 text-teal-800 bg-teal-50/80">
+                    <i class="fa-solid fa-file-invoice-dollar"></i> বিক্রয় খাতা
+                </button>
+                <button onclick="switchTab('purchase')" id="tab-purchase" class="tab-btn px-4 py-2 font-bold text-sm sm:text-base rounded-t-xl transition flex items-center gap-2 text-gray-600 hover:text-amber-800 hover:bg-amber-50">
+                    <i class="fa-solid fa-cart-flatbed"></i> ক্রয় খাতা
+                </button>
+                <button onclick="switchTab('others')" id="tab-others" class="tab-btn px-4 py-2 font-bold text-sm sm:text-base rounded-t-xl transition flex items-center gap-2 text-gray-600 hover:text-amber-800 hover:bg-amber-50">
+                    <i class="fa-solid fa-receipt"></i> অন্যান্য খরচ
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 flex-1 w-full">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+            <!-- Main Ledger Content (3 cols wide) -->
+            <div class="lg:col-span-3 space-y-6">
+
+                <!-- Selected Date Info Bar -->
+                <div class="bg-white/80 backdrop-blur p-3.5 rounded-2xl border border-amber-200 shadow-sm flex justify-between items-center flex-wrap gap-2">
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-emerald-600 animate-pulse"></span>
+                        <span id="currentDateDisplay" class="font-bold text-gray-800 text-base sm:text-lg">--</span>
+                    </div>
+                    <div class="text-xs text-amber-900 bg-amber-100/70 px-3 py-1 rounded-full font-bold">
+                        <i class="fa-solid fa-pen-nib mr-1"></i> খাতার মতো সরাসরি টাইপ করুন
+                    </div>
+                </div>
+
+                <!-- ================= TAB 1: SALES SECTION ================= -->
+                <section id="section-sales" class="tab-content space-y-6">
+                    
+                    <!-- Summary Cards -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="bg-teal-800 text-white p-5 rounded-2xl shadow-sm flex justify-between items-center">
+                            <div>
+                                <p class="text-xs font-semibold text-teal-100 uppercase tracking-wider">আজকের মোট বিক্রি</p>
+                                <h3 id="statTotalSales" class="text-2xl sm:text-3xl font-extrabold mt-1">৳ ০</h3>
+                            </div>
+                            <div class="bg-white/20 p-3 rounded-xl">
+                                <i class="fa-solid fa-sack-dollar text-2xl"></i>
+                            </div>
+                        </div>
+
+                        <div class="bg-amber-700 text-white p-5 rounded-2xl shadow-sm flex justify-between items-center">
+                            <div>
+                                <p class="text-xs font-semibold text-amber-100 uppercase tracking-wider">আজকের মোট লাভ</p>
+                                <h3 id="statTotalProfit" class="text-2xl sm:text-3xl font-extrabold mt-1">৳ ০</h3>
+                            </div>
+                            <div class="bg-white/20 p-3 rounded-xl">
+                                <i class="fa-solid fa-chart-line text-2xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SECTION 1: Sales Ledger Notebook Table -->
+                    <div class="ledger-page rounded-2xl overflow-hidden">
+                        <div class="p-4 bg-amber-100/60 border-b border-amber-200 flex flex-wrap justify-between items-center gap-2">
+                            <div>
+                                <h2 class="text-lg font-bold text-amber-950 flex items-center gap-2">
+                                    <span class="bg-teal-800 text-white text-xs px-2 py-0.5 rounded font-bold">খাতা ১</span>
+                                    বিক্রয় হিসাব ও ইনভয়েস তথ্য
+                                </h2>
+                                <p class="text-xs text-amber-800 mt-0.5">নিচের সারিতে সরাসরি নাম ও দাম টাইপ করলে অটোমেটিক হিসাব যুক্ত হবে</p>
+                            </div>
+                            
+                            <div class="flex gap-2 no-print">
+                                <button onclick="addNewSalesRow(false)" class="bg-teal-700 hover:bg-teal-800 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow">
+                                    <i class="fa-solid fa-plus"></i> + নতুন ইনভয়েসের পণ্য
+                                </button>
+                                <button onclick="addNewSalesRow(true)" class="bg-amber-700 hover:bg-amber-800 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow">
+                                    <i class="fa-solid fa-file-circle-plus"></i> + নতুন ইনভয়েস
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Direct Ledger Table -->
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm border-collapse ledger-table">
+                                <thead>
+                                    <tr class="bg-amber-200/50 text-amber-950 font-bold border-b border-amber-300 text-xs">
+                                        <th class="p-2.5 w-24">সময়</th>
+                                        <th class="p-2.5 w-28">ইনভয়েস #</th>
+                                        <th class="p-2.5 min-w-[180px]">হিসাবের নাম (পণ্য বিবরণ)</th>
+                                        <th class="p-2.5 w-28 text-right">মূল্য (৳)</th>
+                                        <th class="p-2.5 w-32 text-right bg-amber-100/70">মোট ইনভয়েস (৳)</th>
+                                        <th class="p-2.5 w-28 text-right">লাভ (৳)</th>
+                                        <th class="p-2.5 w-28 text-center">অবস্থা</th>
+                                        <th class="p-2.5 min-w-[120px]">অন্যান্য নোট</th>
+                                        <th class="p-2.5 w-12 text-center no-print"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="salesTableBody" class="divide-y divide-amber-200/60 text-gray-800">
+                                    <!-- Dynamic Ledger Rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- SECTION 2: Due Sales Tracker -->
+                    <div class="ledger-page rounded-2xl overflow-hidden border border-orange-200">
+                        <div class="p-4 bg-orange-100/60 border-b border-orange-200 flex justify-between items-center">
+                            <div>
+                                <h2 class="text-base sm:text-lg font-bold text-orange-950 flex items-center gap-2">
+                                    <span class="bg-orange-700 text-white text-xs px-2 py-0.5 rounded font-bold">খাতা ২</span>
+                                    বকেয়া (বাকি) লেনদেন ট্র্যাকার
+                                </h2>
+                                <p class="text-xs text-orange-800 mt-0.5">বাকি সিলেক্ট করা ইনভয়েসগুলোর তথ্য অটোমেটিক এখানে যোগ হবে</p>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm border-collapse">
+                                <thead>
+                                    <tr class="bg-orange-200/50 text-orange-950 font-bold border-b border-orange-300 text-xs">
+                                        <th class="p-3">ইনভয়েস #</th>
+                                        <th class="p-3">সময়</th>
+                                        <th class="p-3 min-w-[150px]">ক্রেতার নাম</th>
+                                        <th class="p-3">পণ্য বিবরণ</th>
+                                        <th class="p-3 text-right">বাকি টাকা (৳)</th>
+                                        <th class="p-3 text-center">স্ট্যাটাস</th>
+                                        <th class="p-3 text-center no-print">অ্যাকশন</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dueSalesTableBody" class="divide-y divide-orange-200/50">
+                                    <!-- Dynamic Due Sales Rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="dueEmptyState" class="p-6 text-center text-gray-400 hidden">
+                            <i class="fa-solid fa-circle-check text-3xl mb-1 text-emerald-600"></i>
+                            <p class="text-xs font-bold text-gray-500">কোনো বকেয়া লেনদেন বাকি নেই!</p>
+                        </div>
+                    </div>
+
+                </section>
+
+                <!-- ================= TAB 2: PURCHASES SECTION ================= -->
+                <section id="section-purchase" class="tab-content hidden space-y-6">
+                    <div class="bg-amber-800 text-white p-5 rounded-2xl shadow-sm flex justify-between items-center">
+                        <div>
+                            <p class="text-xs font-semibold text-amber-100 uppercase tracking-wider">আজকের মোট ক্রয়</p>
+                            <h3 id="statTotalPurchase" class="text-2xl sm:text-3xl font-extrabold mt-1">৳ ০</h3>
+                        </div>
+                        <div class="bg-white/20 p-3 rounded-xl">
+                            <i class="fa-solid fa-cart-shopping text-2xl"></i>
+                        </div>
+                    </div>
+
+                    <div class="ledger-page rounded-2xl overflow-hidden">
+                        <div class="p-4 bg-amber-100/60 border-b border-amber-200 flex justify-between items-center">
+                            <h2 class="text-lg font-bold text-amber-950">ক্রয়কৃত পণ্য ও কাঁচামালের হিসাব</h2>
+                            <button onclick="addNewPurchaseRow()" class="bg-teal-700 hover:bg-teal-800 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 no-print">
+                                <i class="fa-solid fa-plus"></i> + নতুন ক্রয় হিসাব
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm border-collapse ledger-table">
+                                <thead>
+                                    <tr class="bg-amber-200/50 text-amber-950 font-bold border-b border-amber-300 text-xs">
+                                        <th class="p-2.5 w-24">সময়</th>
+                                        <th class="p-2.5">হিসাবের নাম (পণ্য/পরিমাণ)</th>
+                                        <th class="p-2.5 w-36 text-right">মোট দাম (৳)</th>
+                                        <th class="p-2.5 min-w-[150px]">নোট</th>
+                                        <th class="p-2.5 w-12 text-center no-print"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="purchaseTableBody" class="divide-y divide-amber-200/60">
+                                    <!-- Dynamic Rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ================= TAB 3: OTHERS SECTION ================= -->
+                <section id="section-others" class="tab-content hidden space-y-6">
+                    <div class="ledger-page rounded-2xl overflow-hidden">
+                        <div class="p-4 bg-amber-100/60 border-b border-amber-200 flex justify-between items-center">
+                            <div>
+                                <h2 class="text-lg font-bold text-amber-950">অন্যান্য লেনদেন ও ঘটনা নোট</h2>
+                                <p class="text-xs text-amber-800">দোকান ভাড়া, বিদ্যুৎ বিল বা অন্যান্য আনুষঙ্গিক খরচ</p>
+                            </div>
+                            <button onclick="addNewOtherRow()" class="bg-teal-700 hover:bg-teal-800 text-white px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 no-print">
+                                <i class="fa-solid fa-plus"></i> + নতুন খরচ যুক্ত করুন
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm border-collapse ledger-table">
+                                <thead>
+                                    <tr class="bg-amber-200/50 text-amber-950 font-bold border-b border-amber-300 text-xs">
+                                        <th class="p-2.5 w-24">সময়</th>
+                                        <th class="p-2.5">ঘটনা / বিবরণ</th>
+                                        <th class="p-2.5 w-32">ধরন</th>
+                                        <th class="p-2.5 w-36 text-right">টাকা (৳)</th>
+                                        <th class="p-2.5 w-12 text-center no-print"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="othersTableBody" class="divide-y divide-amber-200/60">
+                                    <!-- Dynamic Rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+
+            <!-- Right Sidebar Panel Controls -->
+            <div class="lg:col-span-1 space-y-4 no-print">
+                <div class="bg-white/90 backdrop-blur p-5 rounded-2xl border border-amber-200 shadow-sm space-y-3 sticky top-24">
+                    <h3 class="text-sm font-bold text-amber-950 uppercase tracking-wider pb-2 border-b border-amber-100">
+                        <i class="fa-solid fa-sliders text-amber-800 mr-1"></i> দ্রুত একশন ও রিপোর্ট
+                    </h3>
+
+                    <button onclick="window.print()" class="w-full bg-white hover:bg-amber-50 text-gray-800 font-bold py-2.5 px-4 border border-amber-300 rounded-xl shadow-sm flex items-center justify-between transition">
+                        <span class="text-xs sm:text-sm">প্রিন্ট করুন</span>
+                        <i class="fa-solid fa-print text-amber-800"></i>
+                    </button>
+
+                    <button onclick="exportToCSV()" class="w-full bg-white hover:bg-emerald-50 text-emerald-900 font-bold py-2.5 px-4 border border-emerald-300 rounded-xl shadow-sm flex items-center justify-between transition">
+                        <span class="text-xs sm:text-sm">গুগল শীটে রূপান্তর (CSV)</span>
+                        <i class="fa-solid fa-file-excel text-emerald-700"></i>
+                    </button>
+
+                    <div class="pt-3 border-t border-amber-100">
+                        <button onclick="openDeleteConfirmModal()" class="w-full bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold py-2.5 px-4 border border-rose-200 rounded-xl shadow-sm flex items-center justify-between transition">
+                            <span class="text-xs sm:text-sm">হিাসাব মুছে ফেলুন</span>
+                            <i class="fa-solid fa-trash-can text-rose-600"></i>
+                        </button>
+                    </div>
+
+                    <div class="pt-3 border-t border-amber-100 text-center">
+                        <p class="text-[11px] text-gray-500 font-semibold">মেমোরি ব্যবহার: <span id="storageUsage">০ KB</span></p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteConfirmModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden p-4 no-print">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 text-center">
+            <div class="w-12 h-12 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto text-xl">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 class="font-bold text-lg text-gray-800">হিসাব মুছে ফেলতে চান?</h3>
+            <p class="text-xs text-gray-600 leading-relaxed">
+                সিলেক্ট করা তারিখের সকল হিসাব খাতা থেকে মুছে যাবে। মুছে ফেলার আগে প্রিন্ট বা এক্সেল ডাউনলোড নিশ্চিত করুন।
+            </p>
+            <div class="flex justify-center gap-3 pt-2">
+                <button onclick="closeDeleteConfirmModal()" class="px-4 py-2 bg-gray-200 text-gray-700 text-xs font-bold rounded-xl">বাতিল</button>
+                <button onclick="executeDataDeletion()" class="px-4 py-2 bg-rose-600 text-white text-xs font-bold rounded-xl hover:bg-rose-700 shadow">হ্যাঁ, মুছে ফেলুন</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoice View / Print Modal -->
+    <div id="invoiceViewModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 id="invModalTitle" class="font-bold text-lg text-amber-900">ইনভয়েস বিবরণী</h3>
+                <button onclick="closeInvoiceModal()" class="text-gray-400 font-bold text-xl no-print">&times;</button>
+            </div>
+            <div id="invModalContent" class="space-y-3 text-sm"></div>
+            <div class="flex justify-end gap-2 pt-2 border-t no-print">
+                <button onclick="window.print()" class="px-4 py-2 bg-amber-800 text-white rounded-xl text-xs font-bold"><i class="fa-solid fa-print"></i> প্রিন্ট</button>
+                <button onclick="closeInvoiceModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-xl text-xs font-bold">বন্ধ করুন</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Logic -->
+    <script>
+        const bnMonths = ["জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল", "মে", "জুন", "জুলাই", "আগস্ট", "সেপ্টেম্বর", "অক্টোবর", "নভেম্বর", "ডিসেম্বর"];
+        const bnDays = ["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার", "শুক্রবার", "শনিবার"];
+        const bnDigits = {'0':'০','1':'১','2':'২','3':'৩','4':'৪','5':'৫','6':'৬','7':'৭','8':'৮','9':'৯'};
+
+        function toBnNum(num) {
+            if (num === null || num === undefined) return '০';
+            return num.toString().replace(/[0-9]/g, d => bnDigits[d] || d);
+        }
+
+        let appData = { sales: [], purchases: [], others: [] };
+        let filterStart = '';
+        let filterEnd = '';
+
+        window.onload = function() {
+            loadStoredData();
+            const today = getTodayYMD();
+            document.getElementById('startDate').value = today;
+            document.getElementById('endDate').value = today;
+            filterStart = today;
+            filterEnd = today;
+
+            updateDateDisplay();
+            renderAll();
+        };
+
+        function getTodayYMD() {
+            return new Date().toISOString().split('T')[0];
+        }
+
+        function loadStoredData() {
+            const stored = localStorage.getItem('daily_ledger_accounts');
+            if (stored) {
+                try {
+                    appData = JSON.parse(stored);
+                } catch(e) { console.error(e); }
+            } else {
+                // Initial Default Ledger Records
+                const today = getTodayYMD();
+                appData = {
+                    sales: [
+                        { id: 1, invoice: '#INV-001', time: '10:00 AM', date: today, item: 'চাল (৫০ কেজি)', price: 5000, profit: 500, status: 'পরিশোধিত', customer: '', note: '' },
+                        { id: 2, invoice: '#INV-001', time: '10:00 AM', date: today, item: 'চিনি (২০ কেজি)', price: 2000, profit: 200, status: 'পরিশোধিত', customer: '', note: '' },
+                        { id: 3, invoice: '#INV-002', time: '11:30 AM', date: today, item: 'তেল (৫ লিটার)', price: 1500, profit: 150, status: 'বাকি', customer: 'রহিম স্টোর', note: 'বকেয়া রাখা হয়েছে' }
+                    ],
+                    purchases: [
+                        { id: 101, time: '09:00 AM', date: today, item: 'পাইকারি চাল ক্রয়', price: 4500, note: '' }
+                    ],
+                    others: [
+                        { id: 201, time: '01:00 PM', date: today, title: 'দোকানের চা-নাস্তা খরচ', type: 'খরচ', amount: 150 }
+                    ]
+                };
+                saveToStorage();
+            }
+        }
+
+        function saveToStorage() {
+            localStorage.setItem('daily_ledger_accounts', JSON.stringify(appData));
+            updateStorageUsageInfo();
+        }
+
+        function updateStorageUsageInfo() {
+            const dataStr = localStorage.getItem('daily_ledger_accounts') || '';
+            const kb = (dataStr.length * 2 / 1024).toFixed(1);
+            document.getElementById('storageUsage').innerText = toBnNum(kb) + ' KB';
+        }
+
+        function updateDateDisplay() {
+            const display = document.getElementById('currentDateDisplay');
+            if (!filterStart) {
+                display.innerText = 'সকল সময়ের হিসাব';
+                return;
+            }
+            const d1 = new Date(filterStart);
+            const dateStr1 = `${toBnNum(d1.getDate())} ${bnMonths[d1.getMonth()]}, ${toBnNum(d1.getFullYear())} (${bnDays[d1.getDay()]})`;
+
+            if (filterStart === filterEnd || !filterEnd) {
+                display.innerText = dateStr1;
+            } else {
+                const d2 = new Date(filterEnd);
+                const dateStr2 = `${toBnNum(d2.getDate())} ${bnMonths[d2.getMonth()]}, ${toBnNum(d2.getFullYear())} (${bnDays[d2.getDay()]})`;
+                display.innerText = `${dateStr1} - ${dateStr2}`;
+            }
+        }
+
+        function filterByDate() {
+            filterStart = document.getElementById('startDate').value;
+            filterEnd = document.getElementById('endDate').value;
+            updateDateDisplay();
+            renderAll();
+        }
+
+        function resetDateFilter() {
+            const today = getTodayYMD();
+            document.getElementById('startDate').value = today;
+            document.getElementById('endDate').value = today;
+            filterStart = today;
+            filterEnd = today;
+            updateDateDisplay();
+            renderAll();
+        }
+
+        function isDateInFilter(dateStr) {
+            if (!filterStart && !filterEnd) return true;
+            if (filterStart && dateStr < filterStart) return false;
+            if (filterEnd && dateStr > filterEnd) return false;
+            return true;
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active', 'border-b-2', 'border-teal-700', 'text-teal-800', 'bg-teal-50/80');
+                btn.classList.add('text-gray-600');
+            });
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+
+            const activeBtn = document.getElementById(`tab-${tabName}`);
+            const activeContent = document.getElementById(`section-${tabName}`);
+
+            if (activeBtn && activeContent) {
+                activeBtn.classList.add('active', 'border-b-2', 'border-teal-700', 'text-teal-800', 'bg-teal-50/80');
+                activeBtn.classList.remove('text-gray-600');
+                activeContent.classList.remove('hidden');
+            }
+        }
+
+        function renderAll() {
+            renderSalesTable();
+            renderDueSalesTable();
+            renderPurchaseTable();
+            renderOthersTable();
+            updateStorageUsageInfo();
+        }
+
+        // SALES TABLE WITH INLINE EVENT HANDLING (PRESERVES FOCUS)
+        function renderSalesTable() {
+            const tbody = document.getElementById('salesTableBody');
+            tbody.innerHTML = '';
+
+            const sales = appData.sales.filter(s => isDateInFilter(s.date));
+
+            // Auto-calculate Invoice totals
+            const invoiceSumMap = {};
+            sales.forEach(s => {
+                invoiceSumMap[s.invoice] = (invoiceSumMap[s.invoice] || 0) + Number(s.price || 0);
+            });
+
+            sales.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-amber-100/30 transition";
+                tr.setAttribute('data-id', item.id);
+
+                tr.innerHTML = `
+                    <td class="p-1.5"><input type="text" value="${item.time}" oninput="updateSaleFieldInline(${item.id}, 'time', this.value)"></td>
+                    <td class="p-1.5"><input type="text" value="${item.invoice}" class="font-bold text-teal-800" onchange="updateSaleFieldWithReRender(${item.id}, 'invoice', this.value)"></td>
+                    <td class="p-1.5"><input type="text" placeholder="পণ্যের বিবরণ..." value="${item.item || ''}" oninput="updateSaleFieldInline(${item.id}, 'item', this.value)"></td>
+                    <td class="p-1.5"><input type="number" step="any" placeholder="০" class="text-right font-semibold price-input" value="${item.price || ''}" oninput="onPriceOrProfitChange(${item.id}, 'price', this)"></td>
+                    <td class="p-2 text-right font-bold text-amber-950 bg-amber-100/50 inv-total-${item.invoice.replace(/[^a-zA-Z0-9]/g, '')}">৳ ${toBnNum((invoiceSumMap[item.invoice] || 0).toLocaleString())}</td>
+                    <td class="p-1.5"><input type="number" step="any" placeholder="০" class="text-right text-emerald-800 font-semibold profit-input" value="${item.profit || ''}" oninput="onPriceOrProfitChange(${item.id}, 'profit', this)"></td>
+                    <td class="p-1.5">
+                        <select onchange="updateSaleFieldWithReRender(${item.id}, 'status', this.value)" class="font-bold text-xs ${item.status === 'বাকি' ? 'text-orange-800' : 'text-emerald-800'}">
+                            <option value="পরিশোধিত" ${item.status === 'পরিশোধিত' ? 'selected' : ''}>পরিশোধিত</option>
+                            <option value="বাকি" ${item.status === 'বাকি' ? 'selected' : ''}>বাকি</option>
+                        </select>
+                    </td>
+                    <td class="p-1.5"><input type="text" placeholder="নোট..." value="${item.note || ''}" oninput="updateSaleFieldInline(${item.id}, 'note', this.value)"></td>
+                    <td class="p-1.5 text-center no-print">
+                        <button onclick="deleteSaleRow(${item.id})" class="text-rose-500 hover:text-rose-700 p-1" title="ডিলিট">
+                            <i class="fa-solid fa-xmark text-base"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            updateHeaderTotalsOnly();
+        }
+
+        // Silent inline field update without losing input focus
+        function updateSaleFieldInline(id, field, value) {
+            const item = appData.sales.find(s => s.id === id);
+            if (!item) return;
+            item[field] = field === 'price' || field === 'profit' ? Number(value) || 0 : value;
+            saveToStorage();
+        }
+
+        // Updates price/profit dynamically recalculating total totals without destroying input elements
+        function onPriceOrProfitChange(id, field, inputElement) {
+            const item = appData.sales.find(s => s.id === id);
+            if (!item) return;
+
+            item[field] = Number(inputElement.value) || 0;
+            saveToStorage();
+
+            // Dynamic updates for invoice total cells without destroying focus
+            recalculateInvoiceTotalsDynamic();
+            updateHeaderTotalsOnly();
+        }
+
+        function recalculateInvoiceTotalsDynamic() {
+            const sales = appData.sales.filter(s => isDateInFilter(s.date));
+            const invoiceSumMap = {};
+            sales.forEach(s => {
+                invoiceSumMap[s.invoice] = (invoiceSumMap[s.invoice] || 0) + Number(s.price || 0);
+            });
+
+            for (const [invNum, sum] of Object.entries(invoiceSumMap)) {
+                const safeClass = invNum.replace(/[^a-zA-Z0-9]/g, '');
+                const cells = document.querySelectorAll(`.inv-total-${safeClass}`);
+                cells.forEach(cell => {
+                    cell.innerText = '৳ ' + toBnNum(sum.toLocaleString());
+                });
+            }
+        }
+
+        function updateHeaderTotalsOnly() {
+            const sales = appData.sales.filter(s => isDateInFilter(s.date));
+            let totalSales = 0;
+            let totalProfit = 0;
+
+            sales.forEach(item => {
+                totalSales += Number(item.price || 0);
+                totalProfit += Number(item.profit || 0);
+            });
+
+            document.getElementById('statTotalSales').innerText = '৳ ' + toBnNum(totalSales.toLocaleString());
+            document.getElementById('statTotalProfit').innerText = '৳ ' + toBnNum(totalProfit.toLocaleString());
+        }
+
+        function updateSaleFieldWithReRender(id, field, value) {
+            const item = appData.sales.find(s => s.id === id);
+            if (!item) return;
+
+            item[field] = value;
+
+            if (field === 'status' && value === 'বাকি' && !item.customer) {
+                item.customer = prompt('ক্রেতার নাম লিখুন:') || 'বাকি ক্রেতা';
+            }
+
+            saveToStorage();
+            renderAll();
+        }
+
+        function addNewSalesRow(isNewInvoice = false) {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            let lastInvoice = '#INV-001';
+            if (appData.sales.length > 0) {
+                if (isNewInvoice) {
+                    const lastNum = parseInt(appData.sales[0].invoice.replace('#INV-', '')) || appData.sales.length;
+                    lastInvoice = '#INV-' + (lastNum + 1).toString().padStart(3, '0');
+                } else {
+                    lastInvoice = appData.sales[0].invoice;
+                }
+            }
+
+            const newRow = {
+                id: Date.now(),
+                invoice: lastInvoice,
+                time: timeStr,
+                date: getTodayYMD(),
+                item: '',
+                price: 0,
+                profit: 0,
+                status: 'পরিশোধিত',
+                customer: '',
+                note: ''
+            };
+
+            appData.sales.unshift(newRow);
+            saveToStorage();
+            renderSalesTable();
+            renderDueSalesTable();
+        }
+
+        function deleteSaleRow(id) {
+            appData.sales = appData.sales.filter(s => s.id !== id);
+            saveToStorage();
+            renderAll();
+        }
+
+        // DUE SALES TRACKER TABLE
+        function renderDueSalesTable() {
+            const tbody = document.getElementById('dueSalesTableBody');
+            tbody.innerHTML = '';
+
+            const dueSales = appData.sales.filter(s => s.status === 'বাকি' && isDateInFilter(s.date));
+
+            if (dueSales.length === 0) {
+                document.getElementById('dueEmptyState').classList.remove('hidden');
+                return;
+            } else {
+                document.getElementById('dueEmptyState').classList.add('hidden');
+            }
+
+            dueSales.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-orange-50/50 transition";
+
+                tr.innerHTML = `
+                    <td class="p-3 font-bold text-teal-800">${item.invoice}</td>
+                    <td class="p-3 text-gray-500">${toBnNum(item.time)}</td>
+                    <td class="p-3">
+                        <input type="text" value="${item.customer || ''}" placeholder="ক্রেতার নাম..." onchange="updateSaleField(${item.id}, 'customer', this.value)" class="font-bold text-orange-950 border-b border-orange-300">
+                    </td>
+                    <td class="p-3 font-medium text-gray-800">${item.item || 'পণ্য নির্দিষ্ট নয়'}</td>
+                    <td class="p-3 text-right font-extrabold text-orange-800">৳ ${toBnNum((item.price || 0).toLocaleString())}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="updateSaleField(${item.id}, 'status', 'পরিশোধিত')" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs px-2.5 py-1 rounded-lg font-bold shadow">
+                            পরিশোধিত করুন
+                        </button>
+                    </td>
+                    <td class="p-3 text-center no-print whitespace-nowrap">
+                        <button onclick="printInvoiceAndConfirmDelete(${item.id})" class="text-teal-700 hover:text-teal-900 p-1 mr-1" title="প্রিন্ট ও ক্লিয়ার">
+                            <i class="fa-solid fa-print"></i>
+                        </button>
+                        <button onclick="deleteSaleRow(${item.id})" class="text-rose-500 p-1" title="ডিলিট">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function printInvoiceAndConfirmDelete(id) {
+            const item = appData.sales.find(s => s.id === id);
+            if (!item) return;
+
+            viewInvoiceDetails(item.invoice);
+            setTimeout(() => {
+                if (confirm('ইনভয়েসটি প্রিন্ট করার পর বকেয়া হিসাব পরিশোধিত বা ডিলিট করতে চান?')) {
+                    updateSaleField(id, 'status', 'পরিশোধিত');
+                }
+            }, 400);
+        }
+
+        // PURCHASES TABLE
+        function renderPurchaseTable() {
+            const tbody = document.getElementById('purchaseTableBody');
+            tbody.innerHTML = '';
+
+            const purchases = appData.purchases.filter(p => isDateInFilter(p.date));
+            let total = 0;
+
+            purchases.forEach(item => {
+                total += Number(item.price || 0);
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-amber-100/30 transition";
+
+                tr.innerHTML = `
+                    <td class="p-1.5"><input type="text" value="${item.time}" oninput="updatePurchaseField(${item.id}, 'time', this.value)"></td>
+                    <td class="p-1.5"><input type="text" placeholder="ক্রয় বিবরণ..." value="${item.item || ''}" oninput="updatePurchaseField(${item.id}, 'item', this.value)"></td>
+                    <td class="p-1.5"><input type="number" step="any" placeholder="০" class="text-right font-extrabold text-amber-950" value="${item.price || ''}" oninput="onPurchasePriceChange(${item.id}, this.value)"></td>
+                    <td class="p-1.5"><input type="text" placeholder="নোট..." value="${item.note || ''}" oninput="updatePurchaseField(${item.id}, 'note', this.value)"></td>
+                    <td class="p-1.5 text-center no-print">
+                        <button onclick="deletePurchaseRow(${item.id})" class="text-rose-500 p-1">
+                            <i class="fa-solid fa-xmark text-base"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('statTotalPurchase').innerText = '৳ ' + toBnNum(total.toLocaleString());
+        }
+
+        function onPurchasePriceChange(id, val) {
+            updatePurchaseField(id, 'price', val);
+            let total = 0;
+            appData.purchases.filter(p => isDateInFilter(p.date)).forEach(p => {
+                total += Number(p.price || 0);
+            });
+            document.getElementById('statTotalPurchase').innerText = '৳ ' + toBnNum(total.toLocaleString());
+        }
+
+        function addNewPurchaseRow() {
+            const now = new Date();
+            appData.purchases.unshift({
+                id: Date.now(),
+                time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                date: getTodayYMD(),
+                item: '',
+                price: 0,
+                note: ''
+            });
+            saveToStorage();
+            renderPurchaseTable();
+        }
+
+        function updatePurchaseField(id, field, value) {
+            const item = appData.purchases.find(p => p.id === id);
+            if (!item) return;
+            item[field] = field === 'price' ? Number(value) || 0 : value;
+            saveToStorage();
+            if (field === 'price') renderPurchaseTable();
+        }
+
+        function deletePurchaseRow(id) {
+            appData.purchases = appData.purchases.filter(p => p.id !== id);
+            saveToStorage();
+            renderPurchaseTable();
+        }
+
+        // OTHERS TABLE
+        function renderOthersTable() {
+            const tbody = document.getElementById('othersTableBody');
+            tbody.innerHTML = '';
+
+            const others = appData.others.filter(o => isDateInFilter(o.date));
+
+            others.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-amber-100/30 transition";
+
+                tr.innerHTML = `
+                    <td class="p-1.5"><input type="text" value="${item.time}" onchange="updateOtherField(${item.id}, 'time', this.value)"></td>
+                    <td class="p-1.5"><input type="text" placeholder="খরচের বিবরণ..." value="${item.title || ''}" onchange="updateOtherField(${item.id}, 'title', this.value)"></td>
+                    <td class="p-1.5">
+                        <select onchange="updateOtherField(${item.id}, 'type', this.value)" class="font-bold">
+                            <option value="খরচ" ${item.type === 'খরচ' ? 'selected' : ''}>খরচ</option>
+                            <option value="অন্যান্য" ${item.type === 'অন্যান্য' ? 'selected' : ''}>অন্যান্য</option>
+                        </select>
+                    </td>
+                    <td class="p-1.5"><input type="number" step="any" placeholder="০" class="text-right font-extrabold text-rose-800" value="${item.amount || ''}" oninput="updateOtherField(${item.id}, 'amount', this.value)"></td>
+                    <td class="p-1.5 text-center no-print">
+                        <button onclick="deleteOtherRow(${item.id})" class="text-rose-500 p-1">
+                            <i class="fa-solid fa-xmark text-base"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function addNewOtherRow() {
+            const now = new Date();
+            appData.others.unshift({
+                id: Date.now(),
+                time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                date: getTodayYMD(),
+                title: '',
+                type: 'খরচ',
+                amount: 0
+            });
+            saveToStorage();
+            renderOthersTable();
+        }
+
+        function updateOtherField(id, field, value) {
+            const item = appData.others.find(o => o.id === id);
+            if (!item) return;
+            item[field] = field === 'amount' ? Number(value) || 0 : value;
+            saveToStorage();
+        }
+
+        function deleteOtherRow(id) {
+            appData.others = appData.others.filter(o => o.id !== id);
+            saveToStorage();
+            renderOthersTable();
+        }
+
+        // INVOICE MODAL BREAKDOWN
+        function viewInvoiceDetails(invNo) {
+            const items = appData.sales.filter(s => s.invoice === invNo);
+            if (items.length === 0) return;
+
+            document.getElementById('invModalTitle').innerText = `ইনভয়েস বিবরণী (${invNo})`;
+
+            let totalPrice = 0;
+            let rowsHtml = '';
+
+            items.forEach((item, idx) => {
+                totalPrice += Number(item.price || 0);
+                rowsHtml += `
+                    <tr class="border-b">
+                        <td class="py-2">${toBnNum(idx + 1)}. ${item.item || 'পণ্য'}</td>
+                        <td class="py-2 text-right">৳ ${toBnNum((item.price || 0).toLocaleString())}</td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('invModalContent').innerHTML = `
+                <div class="p-3 bg-amber-50 rounded-xl text-xs space-y-1 border border-amber-200">
+                    <p><strong>তারিখ & সময়:</strong> ${items[0].date} (${toBnNum(items[0].time)})</p>
+                    <p><strong>স্ট্যাটাস:</strong> ${items[0].status}</p>
+                    ${items[0].customer ? `<p><strong>ক্রেতা:</strong> ${items[0].customer}</p>` : ''}
+                </div>
+                <table class="w-full text-left text-sm">
+                    <thead>
+                        <tr class="border-b font-bold text-amber-950">
+                            <th class="py-2">পণ্য বিবরণ</th>
+                            <th class="py-2 text-right">মূল্য</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rowsHtml}</tbody>
+                </table>
+                <div class="flex justify-between font-bold text-base pt-2 border-t border-gray-300">
+                    <span>সর্বমোট ইনভয়েস মূল্য:</span>
+                    <span class="text-teal-900">৳ ${toBnNum(totalPrice.toLocaleString())}</span>
+                </div>
+            `;
+
+            document.getElementById('invoiceViewModal').classList.remove('hidden');
+        }
+
+        function closeInvoiceModal() {
+            document.getElementById('invoiceViewModal').classList.add('hidden');
+        }
+
+        // EXPORT TO CSV
+        function exportToCSV() {
+            let csv = "\uFEFFপ্রকার,তারিখ,সময়,ইনভয়েস/বিবরণ,পণ্য,টাকা (৳),অবস্থা,নোট\n";
+
+            appData.sales.filter(s => isDateInFilter(s.date)).forEach(s => {
+                csv += `বিক্রয়,"${s.date}","${s.time}","${s.invoice}","${s.item || ''}",${s.price || 0},"${s.status}","${s.customer || s.note || ''}"\n`;
+            });
+
+            appData.purchases.filter(p => isDateInFilter(p.date)).forEach(p => {
+                csv += `ক্রয়,"${p.date}","${p.time}","-","${p.item || ''}",${p.price || 0},"-","${p.note || ''}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `Accounts_Ledger_${filterStart || 'All'}.csv`;
+            link.click();
+        }
+
+        // DELETE CONFIRMATION MODAL
+        function openDeleteConfirmModal() {
+            document.getElementById('deleteConfirmModal').classList.remove('hidden');
+        }
+
+        function closeDeleteConfirmModal() {
+            document.getElementById('deleteConfirmModal').classList.add('hidden');
+        }
+
+        function executeDataDeletion() {
+            if (filterStart && filterEnd) {
+                appData.sales = appData.sales.filter(s => !isDateInFilter(s.date));
+                appData.purchases = appData.purchases.filter(p => !isDateInFilter(p.date));
+                appData.others = appData.others.filter(o => !isDateInFilter(o.date));
+            } else {
+                appData = { sales: [], purchases: [], others: [] };
+            }
+            saveToStorage();
+            closeDeleteConfirmModal();
+            renderAll();
+        }
+    </script>
+</body>
+</html>
